@@ -1,0 +1,77 @@
+    <div class="margin-top margin-bottom">
+        {# ---------------- part I : Show Deliverly Note Item, split serial_no --------------- #}
+        {% set f_detail   = "Yes" %}
+        {% if doc.is_return == 1 %}     {% set f_cost     = "No" %}
+        {% else %}                      {% set f_cost     = "Yes" %}
+        {% endif %} 
+        {% if f_detail   == "Yes" %}
+        <style>
+             	thead {display: table-header-group;}
+        </style>
+        <table class="table table-bordered table-condensed" style="text-align:center">
+            <caption>each Deliverly Note Item, split serial_no</caption>
+            <thead class="repeat table_header">
+            <tr>
+                <th>No.</th>
+                <th>Item Code</th>
+                <th>Description</th>
+                <th>UOM</th>
+                <th>Quantity</th>
+                <th>Basic Rate</th>
+                <th>Amount</th>
+                {% if f_cost == "Yes" %}  
+                    <th>Incoming Rate</th>
+                    <th>Cost</th>
+                {% endif %} 
+            </tr>
+            </thead>
+            {% set aamount = [0] %}  
+            {% set acost   = [0] %}  
+            {% for item in doc.items %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td style="text-align:left">{{ item.item_code }}</td>
+                    <td style="text-align:left">{{ item.description }}</td>
+                    <td>{{ item.uom }}</td>
+                    <td>{{ frappe.utils.fmt_money(item.qty,format="Integer") }} </td>
+                    <td style="text-align:right">{{ frappe.utils.fmt_money(item.rate) }}</td>
+                    <td style="text-align:right">{{ frappe.utils.fmt_money(item.amount) }}</td>
+                    {% if f_cost == "Yes" %}  
+                        <td style="text-align:right">{{ frappe.utils.fmt_money(item.incoming_rate) }}</td>
+                        <td style="text-align:right">{{ frappe.utils.fmt_money(item.qty * item.incoming_rate) }}</td>
+                    {% endif %} 
+                </tr>
+                {% set w_serial_no_series = frappe.db.get_value('Item',item.item_code,'serial_no_series') %}
+                {% if item.item_group == "HW" and w_serial_no_series != "" %}
+                    <tr>
+                        <td></td> <td></td> 
+                        <td style="text-align:center"><strong> Batch </strong></td>   
+                        <td style="text-align:center"  colspan="2"><strong> Serial No </strong></td>
+                        {% if f_cost == "Yes" %} <td></td> <td></td> <td></td> <td></td>  {% endif %}
+                    </tr>
+                    {% set serials = frappe.utils.itg_split_serial(item.serial_no) %}
+                    {% for sn in serials %}
+                        <tr>
+                            <td></td> <td></td>  
+                            <td> {{ item.batch_no }} </td> 
+                            <td colspan="2"> {{ sn }}  </td> 
+                            {% if f_cost == "Yes" %}  <td></td> <td></td> <td></td> <td></td> {% endif %}
+                        </tr>    
+                    {% endfor %}
+                {% endif %}
+                {% if aamount.append(aamount[-1]  + item.amount )  %}                    {% endif %}
+                {% if acost.append  (acost[-1]    + (item.qty * item.incoming_rate) )  %}{% endif %}
+            {% endfor %}
+            {% if f_cost == "Yes" %}
+                <td></td>
+                <td style="text-align:right"><strong>Total</strong></td>
+                <td></td> <td></td> <td></td>
+                <td></td>
+                <td style="text-align:right"><strong>{{ frappe.utils.fmt_money(aamount[-1]) }}</strong></td>
+                <td></td>
+                <td style="text-align:right"><strong>{{ frappe.utils.fmt_money(acost[-1]) }}</strong></td>
+            {% endif %} 
+        </table>
+        {% endif %}
+    </div>
+
